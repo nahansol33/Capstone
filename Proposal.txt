@@ -1,0 +1,9 @@
+Project Proposal
+Using ASP .NET Core MVC, WebAPI, and SQL server, the following project will be created:
+
+Purpose: Provide a project & task management tracking system for employees that will enable them to access and manage projects.
+
+The projects can have tasks associated with them and can have employees assigned to each tasks. 
+The application will use an APIController to handle user actions. It will also have role-based access to control restricted content to unauthorized employees. 
+The Project tracking software will enable certain users with permissions to create, delete, and assign employees to projects and tasks. 
+
