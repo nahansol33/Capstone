@@ -4,45 +4,96 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Capstone
 {
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            var builder = WebApplication.CreateBuilder(args);
+	public class Program
+	{
+		public static async Task Main(string[] args) // Change to async Task
+		{
+			var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-            builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(connectionString));
-            builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-            builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
-            builder.Services.AddControllersWithViews();
+			builder.Services.AddDbContext<ApplicationDbContext>(options =>
+				options.UseSqlServer(connectionString));
 
-            var app = builder.Build();
+			builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+			{
+				options.SignIn.RequireConfirmedAccount = true;
+			})
+			.AddRoles<IdentityRole>()
+			.AddEntityFrameworkStores<ApplicationDbContext>();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseMigrationsEndPoint();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Home/Error");
-            }
-            app.UseStaticFiles();
+			builder.Services.AddControllersWithViews();
 
-            app.UseRouting();
+			var app = builder.Build();
 
-            app.UseAuthorization();
+			// Seed the database on startup
+			using (var scope = app.Services.CreateScope())
+			{
+				var services = scope.ServiceProvider;
+				try
+				{
+					await SeedData.Initialize(services);
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"Error seeding database: {ex.Message}");
+				}
+			}
 
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
-            app.MapRazorPages();
+			// Configure the HTTP request pipeline.
+			if (app.Environment.IsDevelopment())
+			{
+				app.UseMigrationsEndPoint();
+			}
+			else
+			{
+				app.UseExceptionHandler("/Home/Error");
+			}
+			app.UseStaticFiles();
 
-            app.Run();
-        }
-    }
+			app.UseRouting();
+
+			app.UseAuthentication();
+			app.UseAuthorization();
+
+			app.MapControllerRoute(
+				name: "default",
+				pattern: "{controller=Home}/{action=Index}/{id?}");
+			app.MapRazorPages();
+
+			app.Run();
+		}
+	}
+}
+
+public static class SeedData
+{
+	public static async Task Initialize(IServiceProvider serviceProvider)
+	{
+		var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+		var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
+
+		string[] roleNames = { "Admin", "Manager", "Employee" };
+
+		foreach (var role in roleNames)
+		{
+			if (!await roleManager.RoleExistsAsync(role))
+			{
+				await roleManager.CreateAsync(new IdentityRole(role));
+			}
+		}
+		string adminEmail = "admin@example.com";
+		string adminPassword = "Admin@123";
+
+		var adminUser = await userManager.FindByEmailAsync(adminEmail);
+		if (adminUser == null)
+		{
+			var newAdmin = new IdentityUser { UserName = adminEmail, Email = adminEmail };
+			var result = await userManager.CreateAsync(newAdmin, adminPassword);
+			if (result.Succeeded)
+			{
+				await userManager.AddToRoleAsync(newAdmin, "Admin");
+			}
+		}
+	}
 }
