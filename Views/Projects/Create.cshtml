@@ -1,34 +1,40 @@
-﻿@model Capstone.Models.Project
-
+﻿@model Capstone.Models.ViewModels.ProjectCreateViewModel
 @{
     ViewData["Title"] = "Create";
-    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Create</h1>
+<h1>Create Project</h1>
 
-<h4>Project</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="ProjectName" class="control-label"></label>
-                <input asp-for="ProjectName" class="form-control" />
-                <span asp-validation-for="ProjectName" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+<form asp-action="Create">
+    <div class="form-group">
+        <label asp-for="ProjectName"></label>
+        <input asp-for="ProjectName" class="form-control" />
+        <span asp-validation-for="ProjectName" class="text-danger"></span>
     </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+    <div class="form-group">
+        <label>Assign Employees</label>
+        <select asp-for="SelectedEmployeeIds" asp-items="Model.AvailableEmployees" class="form-control" multiple></select>
+    </div>
+
+    <hr />
+    <h4>Tasks (optional)</h4>
+    <div id="tasks-container">
+        @for (int i = 0; i < Model.Tasks.Count; i++)
+        {
+            <div class="task-item">
+                <input asp-for="Tasks[@i].Title" placeholder="Task Title" class="form-control mb-2" />
+                <input asp-for="Tasks[@i].Description" placeholder="Task Description" class="form-control mb-2" />
+                <input asp-for="Tasks[@i].Status" placeholder="Status" class="form-control mb-2" />
+            </div>
+        }
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+</form>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

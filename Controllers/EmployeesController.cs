@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Capstone.Data;
 using Capstone.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 namespace Capstone.Controllers
 {
@@ -16,13 +17,18 @@ namespace Capstone.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public EmployeesController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+		private readonly RoleManager<IdentityRole> _roleManager;
+		private readonly UserManager<IdentityUser> _userManager;
 
-        // GET: Employees
-        public async Task<IActionResult> Index()
+		public EmployeesController(ApplicationDbContext context, RoleManager<IdentityRole> roleManager, UserManager<IdentityUser> userManager)
+		{
+			_context = context;
+			_roleManager = roleManager;
+			_userManager = userManager;
+		}
+
+		// GET: Employees
+		public async Task<IActionResult> Index()
         {
             return View(await _context.Employees.ToListAsync());
         }
@@ -42,33 +48,79 @@ namespace Capstone.Controllers
                 return NotFound();
             }
 
-            return View(employee);
+			var roles = _roleManager.Roles.Select(r => new SelectListItem
+			{
+				Value = r.Name,
+				Text = r.Name
+			}).ToList();
+
+			// Pass the roles to the view using ViewData
+			ViewData["Roles"] = roles;
+
+			return View(employee);
         }
 
-        // GET: Employees/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
+		// GET: Employee/Create
+		public IActionResult Create()
+		{
+			var roles = new List<SelectListItem>
+			{
+				new SelectListItem { Value = "Admin", Text = "Admin" },
+				new SelectListItem { Value = "Manager", Text = "Manager" },
+				new SelectListItem { Value = "Employee", Text = "Employee" }
+			};
 
-        // POST: Employees/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Email,Role")] Employee employee)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.Add(employee);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(employee);
-        }
+			ViewData["Roles"] = roles;
 
-        // GET: Employees/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+			return View();
+		}
+
+		// POST: Employees/Create
+		// To protect from overposting attacks, enable the specific properties you want to bind to.
+		// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> Create([Bind("EmployeeId, Name, Email, Role")] Employee employee)
+		{
+			if (ModelState.IsValid)
+			{
+				// Create a new IdentityUser and assign a password
+				var identityUser = new IdentityUser
+				{
+					UserName = employee.Email,
+					Email = employee.Email
+				};
+
+				// Create the IdentityUser in the database
+				var result = await _userManager.CreateAsync(identityUser, "Test123!");
+
+				if (result.Succeeded)
+				{
+					// Assign the role to the new employee based on the role selected during creation
+					if (employee.Role != null)
+					{
+						await _userManager.AddToRoleAsync(identityUser, employee.Role);
+					}
+
+					// Add the employee to the database
+					_context.Add(employee);
+					await _context.SaveChangesAsync();
+					return RedirectToAction(nameof(Index));
+				}
+				else
+				{
+					// If there are any errors during user creation, add them to the model state
+					foreach (var error in result.Errors)
+					{
+						ModelState.AddModelError(string.Empty, error.Description);
+					}
+				}
+			}
+
+			return View(employee);
+		}
+		// GET: Employees/Edit/5
+		public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
             {
@@ -80,6 +132,8 @@ namespace Capstone.Controllers
             {
                 return NotFound();
             }
+
+
             return View(employee);
         }
 

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Capstone.Data;
 using Capstone.Models;
+using Capstone.Models.ViewModels;
 
 namespace Capstone.Controllers
 {
@@ -45,85 +46,111 @@ namespace Capstone.Controllers
             return View(taskItem);
         }
 
-        // GET: Tasks/Create
-        public IActionResult Create()
-        {
-            ViewData["ProjectId"] = new SelectList(_context.Projects, "ProjectId", "ProjectName");
-            return View();
-        }
+		// GET: Tasks/Create
+		public IActionResult Create()
+		{
+			// Populate the Project dropdown
+			ViewData["ProjectId"] = new SelectList(_context.Projects, "ProjectId", "ProjectName");
+			return View();
+		}
 
-        // POST: Tasks/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("TaskId,Title,Description,Status,ProjectId")] TaskItem taskItem)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.Add(taskItem);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["ProjectId"] = new SelectList(_context.Projects, "ProjectId", "ProjectName", taskItem.ProjectId);
-            return View(taskItem);
-        }
+		// POST: Tasks/Create
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> Create(TaskItemViewModel viewModel)
+		{
+			if (ModelState.IsValid)
+			{
+				// Create the TaskItem object and assign properties
+				var taskItem = new TaskItem
+				{
+					Title = viewModel.Title,
+					Description = viewModel.Description,
+					Status = viewModel.Status,
+					ProjectId = Convert.ToInt32(Request.Form["ProjectId"])  // Get the ProjectId from the form
+				};
 
-        // GET: Tasks/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
+				// Add the task to the context
+				_context.Add(taskItem);
 
-            var taskItem = await _context.TaskItems.FindAsync(id);
-            if (taskItem == null)
-            {
-                return NotFound();
-            }
-            ViewData["ProjectId"] = new SelectList(_context.Projects, "ProjectId", "ProjectName", taskItem.ProjectId);
-            return View(taskItem);
-        }
+				// Save changes to the database
+				await _context.SaveChangesAsync();
 
-        // POST: Tasks/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("TaskId,Title,Description,Status,ProjectId")] TaskItem taskItem)
-        {
-            if (id != taskItem.TaskId)
-            {
-                return NotFound();
-            }
+				// Redirect to the Index page after successful creation
+				return RedirectToAction(nameof(Index));
+			}
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(taskItem);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!TaskItemExists(taskItem.TaskId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["ProjectId"] = new SelectList(_context.Projects, "ProjectId", "ProjectName", taskItem.ProjectId);
-            return View(taskItem);
-        }
+			// If validation fails, repopulate the Project dropdown
+			ViewData["ProjectId"] = new SelectList(_context.Projects, "ProjectId", "ProjectName");
+			return View(viewModel);
+		}
 
-        // GET: Tasks/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+
+
+		// GET: Tasks/Edit/5
+		public async Task<IActionResult> Edit(int? id)
+		{
+			if (id == null)
+			{
+				return NotFound();
+			}
+
+			var taskItem = await _context.TaskItems.FindAsync(id);
+			if (taskItem == null)
+			{
+				return NotFound();
+			}
+
+			// Manually map TaskItem to TaskItemViewModel
+			var viewModel = new TaskItemViewModel
+			{
+				Title = taskItem.Title,
+				Description = taskItem.Description,
+				Status = taskItem.Status,
+				ProjectId = taskItem.ProjectId // Add this property in your ViewModel if it isn't there yet
+			};
+
+			ViewData["ProjectId"] = new SelectList(_context.Projects, "ProjectId", "ProjectName", taskItem.ProjectId);
+			return View(viewModel); // Send ViewModel to the view
+		}
+
+
+		// POST: Tasks/Edit/5
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> Edit(int id, TaskItemViewModel viewModel)
+		{
+			if (ModelState.IsValid)
+			{
+				// Find the task by id
+				var task = await _context.TaskItems.FindAsync(id);
+				if (task == null)
+				{
+					return NotFound();
+				}
+
+				// Update task details from the view model
+				task.Title = viewModel.Title;
+				task.Description = viewModel.Description;
+				task.Status = viewModel.Status;  // Update the status
+				task.Project = _context.Projects.FirstOrDefault(p => p.ProjectId == viewModel.ProjectId);
+
+				// Save the changes
+				await _context.SaveChangesAsync();
+
+				// Redirect to the Index page or another page
+				return RedirectToAction(nameof(Index));
+			}
+
+			// If validation fails, repopulate the Project dropdown and pass the view model back to the view
+			ViewData["ProjectId"] = new SelectList(_context.Projects, "ProjectId", "ProjectName", viewModel.ProjectId);
+			return View(viewModel);
+		}
+
+
+
+		// GET: Tasks/Delete/5
+		public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
             {

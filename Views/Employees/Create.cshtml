@@ -1,5 +1,4 @@
 ﻿@model Capstone.Models.Employee
-
 @{
     ViewData["Title"] = "Create";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -23,9 +22,16 @@
                 <input asp-for="Email" class="form-control" />
                 <span asp-validation-for="Email" class="text-danger"></span>
             </div>
+
+            <!-- Role dropdown -->
             <div class="form-group">
                 <label asp-for="Role" class="control-label"></label>
-                <input asp-for="Role" class="form-control" />
+                @{
+                    var roles = ViewData["Roles"] as IEnumerable<SelectListItem>;
+                }
+                <select asp-for="Role" class="form-control" asp-items="roles">
+                    <option value="">-- Select Role --</option>
+                </select>
                 <span asp-validation-for="Role" class="text-danger"></span>
             </div>
             <div class="form-group">
@@ -40,5 +46,7 @@
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }
