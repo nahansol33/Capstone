@@ -23,8 +23,9 @@ namespace Capstone
 			.AddEntityFrameworkStores<ApplicationDbContext>();
 
 			builder.Services.AddControllersWithViews();
+            builder.Services.AddControllers();
 
-			var app = builder.Build();
+            var app = builder.Build();
 
 			// Seed the database on startup
 			using (var scope = app.Services.CreateScope())
@@ -49,14 +50,16 @@ namespace Capstone
 			{
 				app.UseExceptionHandler("/Home/Error");
 			}
-			app.UseStaticFiles();
 
-			app.UseRouting();
+			app.UseStaticFiles();	
+
+            app.UseRouting();
 
 			app.UseAuthentication();
 			app.UseAuthorization();
+            app.MapControllers();
 
-			app.MapControllerRoute(
+            app.MapControllerRoute(
 				name: "default",
 				pattern: "{controller=Home}/{action=Index}/{id?}");
 			app.MapRazorPages();
