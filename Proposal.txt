@@ -1,4 +1,9 @@
-Project Proposal
+Project Proposal for:
+Hansol Na 
+Noman Shahid
+Kshitij Dua
+Mustafa Alqudah
+
 Using ASP .NET Core MVC, WebAPI, and SQL server, the following project will be created:
 
 Purpose: Provide a project & task management tracking system for employees that will enable them to access and manage projects.
